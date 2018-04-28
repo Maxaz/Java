@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Account implements Serializable {
+    private final String id; //it's used in the hashcode, it should be immutable.
     private String name;
-    private String id;
-    private Map<Book, Integer> listOfRentedBooks = new HashMap<>();
+    private Map<Book, Integer> listOfRentedBooks = new HashMap<>(); //list? it's map?:)
     private boolean toBeRemoved = false;
 
     Account(String name, String id) {
@@ -17,11 +17,13 @@ public class Account implements Serializable {
         this.id = id;
     }
 
+    //package scope :) it's not a mistake, but package scope != public scope, pls remember :)
     String getId() {
         return id;
     }
 
-    String getName() {
+    //public scope
+    public String getName() {
         return name;
     }
 
@@ -40,6 +42,7 @@ public class Account implements Serializable {
         return false;
     }
 
+    // Try to avoid this type of methods just for tests
     //for test purposes
     boolean assignBook(Book book, Calendar date){
         if (book != null){

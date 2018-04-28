@@ -2,34 +2,35 @@ package pl.maxaz;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class BookRental implements Serializable {
-    private Set<pl.maxaz.Book> bookSet;
-    private Set<pl.maxaz.Account> accountSet;
+    private Set<Book> bookSet;
+    private Set<Account> accountSet;
 
     public BookRental() {
         this.bookSet = new HashSet<>();
         this.accountSet = new LinkedHashSet<>();
     }
 
-    public Set<pl.maxaz.Book> getBookSet() {
+    public Set<Book> getBookSet() {
         return new HashSet<>(bookSet);
     }
 
-    public Set<pl.maxaz.Account> getAccountSet() {
+    public Set<Account> getAccountSet() {
         return new LinkedHashSet<>(accountSet);
     }
 
     public boolean createBook(String title, String author, String ISBN) {
-        if ((title != null) && (author != null) && (ISBN != null)) {
+        Objects.requireNonNull(title);
+        Objects.requireNonNull(author);
+        Objects.requireNonNull(ISBN);
 
-            pl.maxaz.Book book = new Book(title, author, ISBN);
-            //in case of duplicate hashset will not replace or add.
-            bookSet.add(book);
-            return true;
+        Book book = new Book(title, author, ISBN);
+        //in case of duplicate hashset will not replace or add.
+        bookSet.add(book);
+        return true;
 
-        }
-        return false;
     }
 
     public boolean deleteBook(Book book) {
@@ -43,35 +44,28 @@ public class BookRental implements Serializable {
 
     public boolean createAccount(String name) {
         if (name != null) {
-            Integer idValue = 0;
-            if (accountSet.isEmpty()) {
-                idValue++;
-            } else {
-                Iterator<pl.maxaz.Account> it = accountSet.iterator();
-                pl.maxaz.Account value = it.next();
-
-                while (it.hasNext()) {
-                    value = it.next();
-                }
-                idValue = Integer.parseInt(value.getId()) + 1;
-            }
-            // geting the last id from set
-            String idValueString = idValue.toString();
-            // creating a new id
-            StringBuilder stringBuilder = new StringBuilder();
-            for (int i = idValueString.length(); i < 4; i++) {
-                stringBuilder.append("0");
-            }
-            stringBuilder.append(idValueString);
-            // add created account to set
-            pl.maxaz.Account account = new pl.maxaz.Account(name, stringBuilder.toString());
+            Account account = new Account(name, nextId());
             accountSet.add(account);
             return true;
         }
         return false;
     }
 
-    public boolean deleteAccount(pl.maxaz.Account account) {
+    private String nextId() {
+        int idValue = 1;
+        if (!accountSet.isEmpty()) {
+            int maxId = accountSet.stream().mapToInt(account -> Integer.parseInt(account.getId())).max().getAsInt();
+            idValue = maxId + 1;
+        }
+        String id= String.valueOf(idValue);
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = id.length(); i < 4; i++) {
+            stringBuilder.append("0");
+        }
+        return stringBuilder.append(id).toString();
+    }
+
+    public boolean deleteAccount(Account account) {
         if (account != null) {
             account.setToBeRemoved(true);
             accountSet.remove(account);
@@ -80,27 +74,21 @@ public class BookRental implements Serializable {
         return false;
     }
 
-    public pl.maxaz.Account findAccountByID(String id) {
+    public Account findAccountByID(String id) {
         if (id != null) {
-            for (pl.maxaz.Account account : accountSet) {
+            for (Account account : accountSet) {
                 if (account.getId().equals(id)) return account;
             }
         }
         return null;
     }
 
-    public ArrayList<pl.maxaz.Account> findAccountByName(String name) {
-        ArrayList<pl.maxaz.Account> foundAccounts = new ArrayList<>();
-
-        if (name != null) {
-            for (pl.maxaz.Account account : accountSet) {
-                if (account.getName().equals(name)) foundAccounts.add(account);
-            }
-        }
-        return foundAccounts;
+    public List<Account> findAccountByName(String name) {
+        Objects.requireNonNull(name);
+        return accountSet.stream().filter(account -> name.equals(account.getName())).collect(Collectors.toList());
     }
 
-    public boolean assignRentedBook(Book book, pl.maxaz.Account account) {
+    public boolean assignRentedBook(Book book, Account account) {
         if ((bookSet.contains(book) && (accountSet.contains(account)))) {
             return account.assignBook(book);
         }
@@ -108,44 +96,40 @@ public class BookRental implements Serializable {
     }
 
     //for test purposes
-    public boolean assignRentedBook(Book book, pl.maxaz.Account account, Calendar date) {
+    public boolean assignRentedBook(Book book, Account account, Calendar date) {
         if ((book != null) && (account != null)) {
             return account.assignBook(book, date);
         }
         return false;
     }
 
-    private Integer unassignRentedBook(Book book, pl.maxaz.Account account) {
+    private Integer unassignRentedBook(Book book, Account account) {
         if ((book != null) && (account != null)) {
             return account.unassignBook(book);
         }
         return 0;
     }
 
-    public Double checkOut(Book book, pl.maxaz.Account account) {
+    public Double checkOut(Book book, Account account) {
         Integer copyNumber = unassignRentedBook(book, account);
         if (copyNumber > 0) {
             double priceForADay = 0.20d;
             double daysDifference = (double) book.retrieveBook(copyNumber);
-            if (daysDifference > 30) {
-                return priceForADay * (daysDifference - 30);
+            int numberOfDaysWithoutExtraPayment = 30;
+            if (daysDifference > numberOfDaysWithoutExtraPayment) {
+                return priceForADay * (daysDifference - numberOfDaysWithoutExtraPayment);
             }
         }
         return 0.0d;
     }
 
-    public ArrayList<Book> findBookByTitle(String title) {
-        ArrayList<Book> foundBooks = new ArrayList<>();
-
-        if (title != null) {
-            for (Book book : bookSet) {
-                if (book.getTitle().equals(title)) foundBooks.add(book);
-            }
-        }
-        return foundBooks;
+    //in case of collections as a returned type, use the generic types like: List, Map, Set
+    public List<Book> findBookByTitle(String title) {
+        return bookSet.stream().filter(book -> book.getTitle().equals(title)).collect(Collectors.toList());
     }
 
-    public ArrayList<Book> findBookByAuthor(String author) {
+    // try to use the steams like in: findAccountByName, findBookByTitle
+    public List<Book> findBookByAuthor(String author) {
         ArrayList<Book> foundBooks = new ArrayList<>();
 
         if (author != null) {
@@ -156,6 +140,7 @@ public class BookRental implements Serializable {
         return foundBooks;
     }
 
+    // try to use the steams like in: findAccountByName, findBookByTitle
     public Book findBookByISBN(String ISBN) {
         if (ISBN != null) {
             for (Book book : bookSet) {
@@ -165,7 +150,7 @@ public class BookRental implements Serializable {
         return null;
     }
 
-    public Calendar getTimeOfRent(pl.maxaz.Account account, Book book) {
+    public Calendar getTimeOfRent(Account account, Book book) {
         if ((account != null) && (book != null)) {
             Calendar cal = (Calendar) book.getCopiesDatesOfRent().get(account.getRentedBookCopyNumber(book));
             if (cal != null) {
