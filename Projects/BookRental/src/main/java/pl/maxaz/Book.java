@@ -4,12 +4,12 @@ import java.io.Serializable;
 import java.util.*;
 
 public class Book implements Serializable {
+    private final String ISBN; //it's used in hashCode. It should be immutable
     private String title;
     private String author;
-    private String ISBN;
     private int countOfCopies;
     private int countOfRented = 0;
-    private Map<Integer, Calendar> copiesDatesOfRent = new Hashtable<>();
+    private Map<Integer, Calendar> copiesDatesOfRent = new Hashtable<>(); // Calendar is bad type.
     private boolean toBeRemoved = false;
 
     Book(String title, String author, String ISBN) {
@@ -39,7 +39,7 @@ public class Book implements Serializable {
         return ISBN;
     }
 
-    private int getcountOfCopies() {
+    private int getCountOfCopies() {
         return countOfCopies;
     }
 
@@ -47,12 +47,12 @@ public class Book implements Serializable {
         return countOfRented;
     }
 
-    private void setcountOfCopies(int countOfCopies) {
-        this.countOfCopies = countOfCopies;
+    private void incrementCountOfCopies(int amount) {
+        this.countOfCopies+=amount;
     }
 
-    private void setcountOfRented(int countOfRented) {
-        this.countOfRented = countOfRented;
+    private void incrementCountOfRented(int amount) {
+        this.countOfRented+=amount;
     }
 
     void setToBeRemoved() {
@@ -68,7 +68,7 @@ public class Book implements Serializable {
     }
 
     boolean addCopy() {
-        setcountOfCopies(getcountOfCopies() + 1);
+        incrementCountOfCopies(1);
         copiesDatesOfRent.put(countOfCopies, newBookDate());
         return true;
     }
@@ -76,7 +76,7 @@ public class Book implements Serializable {
     boolean addCopy(int numberOfCopies) {
         if (numberOfCopies > 0) {
             for (int i = 1; i <= numberOfCopies; i++) {
-                setcountOfCopies(getcountOfCopies() + 1);
+                incrementCountOfCopies( 1);
                 copiesDatesOfRent.put(countOfCopies, newBookDate());
             }
             return true;
@@ -85,9 +85,9 @@ public class Book implements Serializable {
     }
 
     boolean removeCopy(Integer copyNumber) {
-        if ((getcountOfCopies() > 0) && (countOfRented < countOfCopies) && (copiesDatesOfRent.containsKey(copyNumber))) {
+        if ((getCountOfCopies() > 0) && (countOfRented < countOfCopies) && (copiesDatesOfRent.containsKey(copyNumber))) {
             copiesDatesOfRent.remove(copyNumber);
-            setcountOfCopies(getcountOfCopies() - 1);
+            incrementCountOfCopies( -1);
             return true;
         }
         return false;
@@ -100,7 +100,7 @@ public class Book implements Serializable {
                 if (copiesDatesOfRent.get(i).getTime().equals(newBookDate().getTime())) {
                     Calendar rightNow = Calendar.getInstance();
                     copiesDatesOfRent.put(i, rightNow);
-                    setcountOfRented(countOfRented + 1);
+                    incrementCountOfRented( 1);
                     return i;
                 }
             }
@@ -114,7 +114,7 @@ public class Book implements Serializable {
             for (Integer i : copiesDatesOfRent.keySet()) {
                 if (copiesDatesOfRent.get(i).getTime().equals(newBookDate().getTime())) {
                     copiesDatesOfRent.put(i, date);
-                    setcountOfRented(countOfRented + 1);
+                    incrementCountOfRented( 1);
                     return i;
                 }
             }
@@ -122,7 +122,9 @@ public class Book implements Serializable {
         return -1;
     }
 
-
+    // AVOID using the Calendar and Date types. Read about java.time.* classes
+    // Calendar and Date types have very bad API,
+    // Instead Date use LocalDateTime or LocalDate
     Long retrieveBook(Integer copyNumber) {
         if ((copyNumber > 0) && (copyNumber <= countOfCopies)) {
             Calendar dateOfRent = copiesDatesOfRent.get(copyNumber);
@@ -131,18 +133,21 @@ public class Book implements Serializable {
             // Calculate difference in days
             Long diffDays = diff / (24 * 60 * 60 * 1000);
             copiesDatesOfRent.put(copyNumber, newBookDate());
-            setcountOfRented(countOfRented - 1);
+            incrementCountOfRented( - 1);
             return diffDays;
         }
         return -1L;
     }
 
+    //NO :D
     Calendar newBookDate() {
         Calendar cal = Calendar.getInstance();
         cal.setTime(new Date(0));
         return cal;
     }
 
+    //good contract between equals and hashCode.
+    //NICE!
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -153,7 +158,6 @@ public class Book implements Serializable {
 
     @Override
     public int hashCode() {
-
         return Objects.hash(ISBN);
     }
 
